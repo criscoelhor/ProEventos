@@ -6,6 +6,7 @@ import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
 import { Evento } from '@app/models/Evento';
 import { EventoService } from '@app/services/evento.service';
+import { BsLocaleService } from 'ngx-bootstrap/datepicker';
 
 @Component({
   selector: 'app-evento-lista',
@@ -17,6 +18,7 @@ export class EventoListaComponent implements OnInit {
   modalRef?: BsModalRef;
   public eventos: Evento[] = [];
   public eventosFiltrados: Evento[] = [];
+  public eventoId = 0;
   public widthImg = 100;
   public marginImg = 2;
   public showImg = true;
@@ -48,35 +50,48 @@ export class EventoListaComponent implements OnInit {
 
   public ngOnInit(): void{
     this.spinner.show();
-    this.getEventos();
+    this.carregarEventos();
   }
 
   public showImage(): void{
     this.showImg = !this.showImg;
   }
 
-  public getEventos(): void{
-    this.eventoService.getEventos().subscribe({
-      next: (eventos: Evento[]) => {
+  public carregarEventos(): void{
+    this.eventoService.getEventos().subscribe(
+      (eventos: Evento[]) => {
         this.eventos = eventos,
         this.eventosFiltrados = this.eventos;
       },
-      error: (error: any) => {
+      (error: any) => {
         this.spinner.hide(),
         this.toastr.error('Erro ao carregar os eventos.', 'Erro!')
-      },
-
-      complete: () => this.spinner.hide()
-    });
+      }
+    ).add(() => this.spinner.hide());
   }
 
-  openModal(template: TemplateRef<any>): void {
+  openModal(event: any, template: TemplateRef<any>, eventoId: number): void {
+    event.stopPropagation();
+    this.eventoId = eventoId;
     this.modalRef = this.modalService.show(template, {class: 'modal-sm'});
   }
 
   confirm(): void {
     this.modalRef?.hide();
-    this.toastr.success('O Evento foi deletado com Sucesso.', 'Deletado!')
+    this.spinner.show();
+
+    this.eventoService.deleteEvento(this.eventoId).subscribe(
+      (result: any) => {
+        if(result == 'Deletado'){
+          this.toastr.success('O Evento foi deletado com sucesso.', 'Deletado!');
+          this.carregarEventos();
+        }
+      },
+      (error: any) => {
+        this.toastr.error('Erro ao tentar deletar o evento', 'Erro"')
+      },
+
+    ).add(() => this.spinner.hide());
   }
 
   decline(): void {
